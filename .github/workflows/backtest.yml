@@ -20,16 +20,45 @@ jobs:
       - name: Download 12 months M1 bid data
         shell: bash
         run: |
-          mkdir -p data
+          set -euo pipefail
+          mkdir -p data raw
           FROM="2025-09-15"
           TO="2026-09-15"
           PAIRS="EURUSD GBPUSD USDJPY USDCHF USDCAD AUDUSD NZDUSD EURGBP EURJPY GBPJPY EURCHF AUDJPY CADJPY CHFJPY EURNZD EURAUD GBPAUD GBPCAD GBPNZD AUDCAD"
           for P in $PAIRS; do
             echo "Downloading $P..."
-            npx -y dukascopy-node@1.50.0 -i "${P,,}" -from "$FROM" -to "$TO" -t m1 -p bid -f csv -dir data -fn "$P" -bs 5 -bp 1500
+            rm -rf raw/*
+            npx -y dukascopy-node@1.50.0 -i "${P,,}" -from "$FROM" -to "$TO" -t m1 -p bid -f csv -dir raw -fn "$P" -bs 5 -bp 1500
+            echo "Files produced for $P:"
+            find raw -type f -maxdepth 5 -print
+            SRC="$(find raw -type f -iname '*.csv' | head -n 1 || true)"
+            if [ -z "$SRC" ]; then
+              echo "::error::No CSV produced for $P"
+              exit 1
+            fi
+            cp "$SRC" "data/$P.csv"
+            test -s "data/$P.csv" || { echo "::error::Empty CSV for $P"; exit 1; }
+            echo "$P rows: $(wc -l < "data/$P.csv")"
           done
+          COUNT="$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)"
+          echo "Validated CSV count: $COUNT"
+          test "$COUNT" -eq 20 || { echo "::error::Expected 20 CSVs, found $COUNT"; exit 1; }
+          ls -lh data
+          head -n 3 data/EURUSD.csv
       - name: Run backtest
-        run: python -m src.backtest --data-dir data --out-dir results
+        run: |
+          python -m src.backtest --data-dir data --out-dir results
+          test -s results/trades.csv || { echo "::error::trades.csv missing/empty"; exit 1; }
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("results/summary.json")
+          if not p.exists(): raise SystemExit("summary.json missing")
+          d=json.loads(p.read_text())
+          if not d.get("overall") or len(d.get("per_pair",{})) != 20:
+              raise SystemExit(f"Invalid result: overall={bool(d.get('overall'))}, pairs={len(d.get('per_pair',{}))}")
+          print(json.dumps(d["overall"],indent=2))
+          PY
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
