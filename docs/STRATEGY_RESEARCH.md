@@ -160,6 +160,43 @@ Preflight confirmed:
 
 ---
 
+## OOS pair-by-pair robustness
+
+The 24-month OOS artifact from run 34987939985 was inspected at symbol level.
+
+| Pair | Trades | Win rate | Expectancy R | PF | Total R | Max DD R |
+|---|---:|---:|---:|---:|---:|---:|
+| AUDCAD | 133 | 59.40% | +0.1880 | 1.463 | +25 | 10 |
+| AUDJPY | 119 | 42.86% | -0.1429 | 0.750 | -17 | 19 |
+| AUDUSD | 168 | 52.98% | +0.0595 | 1.127 | +10 | 10 |
+| CADJPY | 191 | 56.54% | +0.1309 | 1.301 | +25 | 12 |
+| CHFJPY | 171 | 58.48% | +0.1696 | 1.408 | +29 | 9 |
+| EURAUD | 145 | 54.48% | +0.0897 | 1.197 | +13 | 7 |
+| EURCHF | 214 | 54.67% | +0.0935 | 1.206 | +20 | 12 |
+| EURGBP | 258 | 53.10% | +0.0620 | 1.132 | +16 | 11 |
+| EURJPY | 180 | 47.78% | -0.0444 | 0.915 | -8 | 21 |
+| EURNZD | 113 | 54.87% | +0.0973 | 1.216 | +11 | 5 |
+| EURUSD | 260 | 51.54% | +0.0308 | 1.063 | +8 | 17 |
+| GBPAUD | 119 | 60.50% | +0.2101 | 1.532 | +25 | 6 |
+| GBPCAD | 193 | 52.85% | +0.0570 | 1.121 | +11 | 14 |
+| GBPJPY | 188 | 48.40% | -0.0319 | 0.938 | -6 | 20 |
+| GBPNZD | 119 | 68.91% | +0.3782 | 2.216 | +45 | 8 |
+| GBPUSD | 246 | 55.69% | +0.1138 | 1.257 | +28 | 10 |
+| NZDUSD | 149 | 51.01% | +0.0201 | 1.041 | +3 | 17 |
+| USDCAD | 266 | 54.51% | +0.0902 | 1.198 | +24 | 15 |
+| USDCHF | 221 | 53.85% | +0.0769 | 1.167 | +17 | 9 |
+| USDJPY | 157 | 53.50% | +0.0701 | 1.151 | +11 | 15 |
+
+**Breadth:** 17 of 20 pairs were profitable OOS; only AUDJPY (-17R), EURJPY (-8R), and GBPJPY (-6R) were negative. The profitable portfolio result is therefore not dependent on only one or two symbols.
+
+**Concentration:** the strongest pair, GBPNZD, contributed 45R of the 290R portfolio total (15.5%). The top five contributors (GBPNZD, CHFJPY, GBPUSD, AUDCAD and CADJPY) contributed 152R (52.4%). Performance is concentrated to some degree, but not dominated by a single pair.
+
+**JPY observation:** three losing pairs were JPY crosses (AUDJPY, EURJPY, GBPJPY), but CHFJPY, CADJPY and USDJPY were profitable. This is worth monitoring in forward data, but it is not a basis for removing JPY pairs after observing the OOS results.
+
+**Decision:** retain all 20 pairs in the frozen strategy. Removing the three OOS losers now would be retrospective optimisation and would contaminate the validation discipline.
+
+---
+
 ## Known implementation/research issues
 
 Several workflow/code errors occurred while building the experiment harness. They are not trading losses and must not be interpreted as strategy results:
