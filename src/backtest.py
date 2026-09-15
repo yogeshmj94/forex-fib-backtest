@@ -23,5 +23,5 @@ def main():
    if not (london or newyork): continue
    rows.append({**x.__dict__,**simulate(x,m)})
   print(f"{s}: H4 setups={len(ss)}")
- out=Path(a.out_dir);out.mkdir(exist_ok=True);d=pd.DataFrame(rows);d.to_csv(out/"trades.csv",index=False);o=summarize(d,cfg["risk_per_trade_pct"]);pp={s:summarize(g,cfg["risk_per_trade_pct"]) for s,g in d.groupby("symbol")};(out/"summary.json").write_text(json.dumps({"buffer_pips":buffer,"overall":o,"per_pair":pp},indent=2,default=str));print(json.dumps(o,indent=2))
+ out=Path(a.out_dir);out.mkdir(parents=True,exist_ok=True);d=pd.DataFrame(rows);d.to_csv(out/"trades.csv",index=False);o=summarize(d,cfg["risk_per_trade_pct"]);pp={s:summarize(g,cfg["risk_per_trade_pct"]) for s,g in d.groupby("symbol")};(out/"summary.json").write_text(json.dumps({"buffer_pips":buffer,"overall":o,"per_pair":pp},indent=2,default=str));print(json.dumps(o,indent=2))
 if __name__=="__main__":main()
