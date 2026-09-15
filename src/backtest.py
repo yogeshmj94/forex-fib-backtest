@@ -4,7 +4,8 @@ import pandas as pd
 from .engine import to_h4,setups_from_h4,simulate
 from .metrics import summarize
 def main():
- p=argparse.ArgumentParser();p.add_argument("--data-dir",default="data");p.add_argument("--out-dir",default="results");p.add_argument("--buffer-pips",type=float,default=None);a=p.parse_args();cfg=json.loads(Path("config.json").read_text());rows=[]\n buffer=cfg["stop_buffer_pips"] if a.buffer_pips is None else a.buffer_pips
+ p=argparse.ArgumentParser();p.add_argument("--data-dir",default="data");p.add_argument("--out-dir",default="results");p.add_argument("--buffer-pips",type=float,default=None);a=p.parse_args();cfg=json.loads(Path("config.json").read_text());rows=[]
+ buffer=cfg["stop_buffer_pips"] if a.buffer_pips is None else a.buffer_pips
  for s in cfg["pairs"]:
   path=Path(a.data_dir)/f"{s}.csv"
   if not path.exists():raise FileNotFoundError(path)
