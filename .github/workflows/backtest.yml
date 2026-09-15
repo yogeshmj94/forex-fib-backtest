@@ -70,6 +70,21 @@ jobs:
           done
           test -s results/tp-live1/trades.csv || { echo "::error::Live-1 TP results missing"; exit 1; }
           test -s results/tp-2r/trades.csv || { echo "::error::Fixed TP results missing"; exit 1; }
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected = {"tp-1.5r": 1.5, "tp-2r": 2.0, "tp-2.5r": 2.5, "tp-3r": 3.0}
+          for folder, rr in expected.items():
+              d=json.loads((Path("results")/folder/"summary.json").read_text())
+              got=d["overall"]["avg_rr"]
+              if abs(got-rr) > 1e-9:
+                  raise SystemExit(f"{folder}: expected avg_rr {rr}, got {got}")
+              print(f"{folder}: verified avg_rr={got}")
+          live=json.loads((Path("results")/"tp-live1"/"summary.json").read_text())
+          if live["tp_mode"] != "live1":
+              raise SystemExit("Live-1 TP mode was not recorded correctly")
+          print("TP sweep sanity checks passed")
+          PY
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
