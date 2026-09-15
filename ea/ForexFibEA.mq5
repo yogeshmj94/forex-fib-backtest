@@ -1,8 +1,8 @@
 #property strict
-#property version   "0.1"
+#property version   "0.2"
 #property description "Frozen forex-fib strategy execution shell. Signal parity must be validated before live use."
 
-#include <Trade/Trade.mqh>
+#include <Trade/Trade.mqh>\n#include "ForexFibSignal.mqh"
 CTrade trade;
 
 input double InitialAccountBalance = 0.0;
@@ -100,8 +100,8 @@ int OnInit()
    if(MathAbs(RiskPercent-0.20)>1e-9 || MathAbs(StopBufferPips-3.0)>1e-9 ||
       MathAbs(TakeProfitR-1.0)>1e-9)
       Print("WARNING: inputs differ from frozen research configuration.");
-   Print("ForexFibEA v0.1 loaded. Trading=",EnableTrading,
-         ". Signal engine intentionally disabled until parity validation.");
+   Print("ForexFibEA v0.2 loaded. Trading=",EnableTrading,
+         ". Signal detector present but autonomous trading remains disabled until parity validation.");
    return INIT_SUCCEEDED;
 }
 
