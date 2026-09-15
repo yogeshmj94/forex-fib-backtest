@@ -1,6 +1,27 @@
 {
-  "fib_retracement": 0.60,
-  "stop_buffer_pips": 3.0,
-  "risk_per_trade_pct": 1.0,
-  "pairs": ["EURUSD","GBPUSD","USDJPY","USDCHF","USDCAD","AUDUSD","NZDUSD","EURGBP","EURJPY","GBPJPY","EURCHF","AUDJPY","CADJPY","CHFJPY","EURNZD","EURAUD","GBPAUD","GBPCAD","GBPNZD","AUDCAD"]
+  "fib_retracement": 0.6,
+  "stop_buffer_pips": 3,
+  "risk_per_trade_pct": 0.3,
+  "pairs": [
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "USDCHF",
+    "USDCAD",
+    "AUDUSD",
+    "NZDUSD",
+    "EURGBP",
+    "EURJPY",
+    "GBPJPY",
+    "EURCHF",
+    "AUDJPY",
+    "CADJPY",
+    "CHFJPY",
+    "EURNZD",
+    "EURAUD",
+    "GBPAUD",
+    "GBPCAD",
+    "GBPNZD",
+    "AUDCAD"
+  ]
 }
