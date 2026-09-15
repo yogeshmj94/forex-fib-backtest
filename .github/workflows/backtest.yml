@@ -1,4 +1,4 @@
-name: Backtest 12 Months
+name: Backtest OOS Sep 2023-Sep 2025
 on:
   workflow_dispatch:
 permissions:
@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data
-          key: dukascopy-m1-2025-09-15-2026-09-15-v1
+          key: dukascopy-m1-2023-09-15-2025-09-15-v1
 
       - name: Download 12 months M1 bid data
         if: steps.cache-data.outputs.cache-hit != 'true'
@@ -30,8 +30,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p data raw
-          FROM="2025-09-15"
-          TO="2026-09-15"
+          FROM="2023-09-15"
+          TO="2025-09-15"
           PAIRS="EURUSD GBPUSD USDJPY USDCHF USDCAD AUDUSD NZDUSD EURGBP EURJPY GBPJPY EURCHF AUDJPY CADJPY CHFJPY EURNZD EURAUD GBPAUD GBPCAD GBPNZD AUDCAD"
           for P in $PAIRS; do
             echo "Downloading $P..."
@@ -60,36 +60,43 @@ jobs:
           test "$COUNT" -eq 20 || { echo "::error::Expected 20 CSVs, found $COUNT"; exit 1; }
           test -s data/EURUSD.csv || { echo "::error::EURUSD data missing/empty"; exit 1; }
 
-      - name: Run backtest
+      - name: Preflight frozen strategy
+        shell: bash
         run: |
-          echo "=== TP Live-1 high/low ==="
-          python -m src.backtest --data-dir data --out-dir results/tp-live1 --buffer-pips 3 --tp-mode live1
-          for R in 1 1.25 1.5 1.75; do
-            echo "=== Fixed ${R}R TP ==="
-            python -m src.backtest --data-dir data --out-dir "results/tp-${R}r" --buffer-pips 3 --tp-mode fixed --rr "$R"
-          done
-          test -s results/tp-live1/trades.csv || { echo "::error::Live-1 TP results missing"; exit 1; }
+          set -euo pipefail
+          python -m py_compile src/engine.py src/backtest.py src/metrics.py
+          python - <<'PY'
+          import json
+          cfg=json.load(open("config.json"))
+          assert cfg["stop_buffer_pips"] == 3.0, cfg
+          assert cfg["risk_per_trade_pct"] == 0.3, cfg
+          assert len(cfg["pairs"]) == 20, len(cfg["pairs"])
+          print("Frozen strategy verified: buffer=3 pips, risk=0.3%, pairs=20")
+          PY
+
+      - name: Run frozen OOS backtest
+        run: |
+          set -euo pipefail
+          python -m src.backtest --data-dir data --out-dir results/oos-2023-09-15_2025-09-15 --buffer-pips 3 --tp-mode fixed --rr 1
+          test -s results/oos-2023-09-15_2025-09-15/trades.csv || { echo "::error::OOS trades missing"; exit 1; }
           python - <<'PY'
           import json
           from pathlib import Path
-          expected = {"tp-1r": 1.0, "tp-1.25r": 1.25, "tp-1.5r": 1.5, "tp-1.75r": 1.75}
-          for folder, rr in expected.items():
-              p=Path("results")/folder/"summary.json"
-              if not p.exists():
-                  raise SystemExit(f"{folder}: summary missing")
-              d=json.loads(p.read_text())
-              got=d["overall"]["avg_rr"]
-              if abs(got-rr) > 1e-9:
-                  raise SystemExit(f"{folder}: expected avg_rr {rr}, got {got}")
-              print(f"{folder}: verified avg_rr={got}")
-          live=json.loads((Path("results")/"tp-live1"/"summary.json").read_text())
-          if live["tp_mode"] != "live1":
-              raise SystemExit("Live-1 TP mode was not recorded correctly")
-          print("Narrow TP sweep sanity checks passed")
+          p=Path("results/oos-2023-09-15_2025-09-15/summary.json")
+          if not p.exists():
+              raise SystemExit("OOS summary missing")
+          d=json.loads(p.read_text())
+          assert d["buffer_pips"] == 3.0, d["buffer_pips"]
+          assert d["tp_mode"] == "fixed", d["tp_mode"]
+          assert d["rr_value"] == 1.0, d["rr_value"]
+          assert len(d["per_pair"]) == 20, len(d["per_pair"])
+          assert abs(d["overall"]["avg_rr"] - 1.0) < 1e-9, d["overall"]["avg_rr"]
+          print(json.dumps(d["overall"], indent=2))
+          print("OOS sanity checks passed")
           PY
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
-          name: forex-fib-backtest-results
+          name: forex-fib-oos-2023-09-15_2025-09-15-results
           path: results/
           retention-days: 30
