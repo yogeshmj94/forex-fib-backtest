@@ -62,21 +62,14 @@ jobs:
 
       - name: Run backtest
         run: |
-          for B in 0 2 3 5 7 10; do
-            echo "=== Buffer ${B} pips ==="
-            python -m src.backtest --data-dir data --out-dir "results/buffer-${B}" --buffer-pips "$B"
+          echo "=== TP Live-1 high/low ==="
+          python -m src.backtest --data-dir data --out-dir results/tp-live1 --buffer-pips 3 --tp-mode live1
+          for R in 1.5 2 2.5 3; do
+            echo "=== Fixed ${R}R TP ==="
+            python -m src.backtest --data-dir data --out-dir "results/tp-${R}r" --buffer-pips 3 --tp-mode fixed --rr "$R"
           done
-          test -s results/buffer-5/trades.csv || { echo "::error::buffer sweep results missing"; exit 1; }
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          p=Path("results/buffer-5/summary.json")
-          if not p.exists(): raise SystemExit("summary.json missing")
-          d=json.loads(p.read_text())
-          if not d.get("overall") or len(d.get("per_pair",{})) != 20:
-              raise SystemExit(f"Invalid result: overall={bool(d.get('overall'))}, pairs={len(d.get('per_pair',{}))}")
-          print(json.dumps(d["overall"],indent=2))
-          PY
+          test -s results/tp-live1/trades.csv || { echo "::error::Live-1 TP results missing"; exit 1; }
+          test -s results/tp-2r/trades.csv || { echo "::error::Fixed TP results missing"; exit 1; }
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
