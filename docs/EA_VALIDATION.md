@@ -47,3 +47,13 @@ The EA computes pip size as 0.0001 for standard 5-digit non-JPY FX quotes and 0.
 - broker/prop-specific symbol suffix handling
 
 These are intentionally outstanding rather than guessed. The Python engine remains the source of truth.
+
+## Running the MQL parity harness
+
+1. Generate `reference_trades.jsonl` with `python -m src.export_parity --trades <validated trades.csv>`.
+2. Copy the JSONL file into the MT5 terminal Files directory used by the Strategy Tester/script.
+3. Compile `ForexFibEA.mq5` and `ParityHarness.mq5` in MetaEditor.
+4. Run `ParityHarness` with the same broker symbols/history.
+5. Treat every `PARITY FAIL` as an implementation discrepancy. Autonomous trading remains disabled until setup, OB, and applicable lifecycle checks pass.
+
+The harness compares direction, H4/Fib construction, OB existence/entry and lifecycle outcome. Price comparisons use broker points as a small tolerance because broker OHLC representations can differ at the final decimal.
