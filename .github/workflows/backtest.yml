@@ -1,0 +1,38 @@
+name: Backtest 12 Months
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install -r requirements.txt
+      - name: Download 12 months M1 bid data
+        shell: bash
+        run: |
+          mkdir -p data
+          FROM="2025-09-15"
+          TO="2026-09-15"
+          PAIRS="EURUSD GBPUSD USDJPY USDCHF USDCAD AUDUSD NZDUSD EURGBP EURJPY GBPJPY EURCHF AUDJPY CADJPY CHFJPY EURNZD EURAUD GBPAUD GBPCAD GBPNZD AUDCAD"
+          for P in $PAIRS; do
+            echo "Downloading $P..."
+            npx -y dukascopy-node@1.50.0 -i "${P,,}" -from "$FROM" -to "$TO" -t m1 -p bid -f csv -dir data -fn "$P" -bs 5 -bp 1500
+          done
+      - name: Run backtest
+        run: python -m src.backtest --data-dir data --out-dir results
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: forex-fib-backtest-results
+          path: results/
+          retention-days: 30
