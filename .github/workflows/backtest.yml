@@ -64,18 +64,20 @@ jobs:
         run: |
           echo "=== TP Live-1 high/low ==="
           python -m src.backtest --data-dir data --out-dir results/tp-live1 --buffer-pips 3 --tp-mode live1
-          for R in 1.5 2 2.5 3; do
+          for R in 1 1.25 1.5 1.75; do
             echo "=== Fixed ${R}R TP ==="
             python -m src.backtest --data-dir data --out-dir "results/tp-${R}r" --buffer-pips 3 --tp-mode fixed --rr "$R"
           done
           test -s results/tp-live1/trades.csv || { echo "::error::Live-1 TP results missing"; exit 1; }
-          test -s results/tp-2r/trades.csv || { echo "::error::Fixed TP results missing"; exit 1; }
           python - <<'PY'
           import json
           from pathlib import Path
-          expected = {"tp-1.5r": 1.5, "tp-2r": 2.0, "tp-2.5r": 2.5, "tp-3r": 3.0}
+          expected = {"tp-1r": 1.0, "tp-1.25r": 1.25, "tp-1.5r": 1.5, "tp-1.75r": 1.75}
           for folder, rr in expected.items():
-              d=json.loads((Path("results")/folder/"summary.json").read_text())
+              p=Path("results")/folder/"summary.json"
+              if not p.exists():
+                  raise SystemExit(f"{folder}: summary missing")
+              d=json.loads(p.read_text())
               got=d["overall"]["avg_rr"]
               if abs(got-rr) > 1e-9:
                   raise SystemExit(f"{folder}: expected avg_rr {rr}, got {got}")
@@ -83,7 +85,7 @@ jobs:
           live=json.loads((Path("results")/"tp-live1"/"summary.json").read_text())
           if live["tp_mode"] != "live1":
               raise SystemExit("Live-1 TP mode was not recorded correctly")
-          print("TP sweep sanity checks passed")
+          print("Narrow TP sweep sanity checks passed")
           PY
       - name: Upload results
         uses: actions/upload-artifact@v4
