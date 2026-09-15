@@ -10,7 +10,7 @@ def main():
     for symbol in cfg["pairs"]:
         path=Path(a.data_dir)/f"{symbol}.csv"
         if not path.exists(): print(f"{symbol}: missing {path}"); continue
-        m1=pd.read_csv(path); m1["timestamp"]=pd.to_datetime(m1["timestamp"],utc=True); m1=m1.sort_values("timestamp")
+        m1=pd.read_csv(path); m1["timestamp"]=pd.to_datetime(m1["timestamp"],unit="ms",utc=True); m1=m1.sort_values("timestamp")
         h4=to_h4(m1)
         for o in orders_from_h4(symbol,h4,cfg["fib_retracement"],cfg["stop_buffer_pips"]):
             r=simulate(o,m1); rows.append({**o.__dict__,**r})
