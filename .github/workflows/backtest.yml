@@ -17,7 +17,15 @@ jobs:
         with:
           node-version: "20"
       - run: pip install -r requirements.txt
+      - name: Restore M1 data cache
+        id: cache-data
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: dukascopy-m1-2025-09-15-2026-09-15-v1
+
       - name: Download 12 months M1 bid data
+        if: steps.cache-data.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -45,6 +53,13 @@ jobs:
           test "$COUNT" -eq 20 || { echo "::error::Expected 20 CSVs, found $COUNT"; exit 1; }
           ls -lh data
           head -n 3 data/EURUSD.csv
+      - name: Validate historical data
+        shell: bash
+        run: |
+          COUNT="$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)"
+          test "$COUNT" -eq 20 || { echo "::error::Expected 20 CSVs, found $COUNT"; exit 1; }
+          test -s data/EURUSD.csv || { echo "::error::EURUSD data missing/empty"; exit 1; }
+
       - name: Run backtest
         run: |
           python -m src.backtest --data-dir data --out-dir results
