@@ -62,12 +62,12 @@ jobs:
 
       - name: Run backtest
         run: |
-          python -m src.backtest --data-dir data --out-dir results
-          test -s results/trades.csv || { echo "::error::trades.csv missing/empty"; exit 1; }
+          for B in 0 2 3 5 7 10; do\n            echo "=== Buffer ${B} pips ==="\n            python -m src.backtest --data-dir data --out-dir "results/buffer-${B}" --buffer-pips "$B"\n          done
+          test -s results/buffer-5/trades.csv || { echo "::error::buffer sweep results missing"; exit 1; }
           python - <<'PY'
           import json
           from pathlib import Path
-          p=Path("results/summary.json")
+          p=Path("results/buffer-5/summary.json")
           if not p.exists(): raise SystemExit("summary.json missing")
           d=json.loads(p.read_text())
           if not d.get("overall") or len(d.get("per_pair",{})) != 20:
