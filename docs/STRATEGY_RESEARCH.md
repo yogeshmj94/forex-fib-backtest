@@ -197,6 +197,25 @@ The 24-month OOS artifact from run 34987939985 was inspected at symbol level.
 
 ---
 
+## Portfolio clustering and daily-risk analysis
+
+The 3,610 OOS filled trades were analyzed using their actual fill and exit timestamps, including the 111 conservative `loss_ambiguous` outcomes already counted as -1R by the backtester.
+
+- **Maximum simultaneous open positions:** 8.
+- At **0.20% fixed risk**, eight simultaneous full-risk positions represent **1.6% nominal open risk**.
+- At 0.30%, the same cluster represents 2.4% nominal open risk.
+- Concurrency at new entries was typically low: median 2 positions, 90th percentile 3, 95th percentile 4, and roughly 99th percentile 5 positions.
+- **Worst historical realized exit-day:** 25 Apr 2024, **-9R** across 11 exits.
+- At 0.20% fixed risk, -9R corresponds to **-1.8%** of initial account size; at 0.30%, -2.7%.
+- There were 72 realized days at or below -3R, 22 at or below -5R, and 3 at or below -8R.
+- Largest observed net currency concentration was six USD risk-units; JPY and AUD each reached five. This confirms that pair-level diversification does not eliminate common-currency clustering.
+
+**Interpretation:** 0.20% fixed risk provides materially more room for clustered FX exposure than 0.30%. Historical daily losses were comfortably below common prop-firm total-loss limits, but daily-loss rules differ by firm and may be equity-based rather than closed-P&L based. Eight simultaneous positions can also experience correlated adverse movement, so nominal per-trade risk must not be interpreted as independent portfolio risk.
+
+**Current production-risk candidate:** retain **0.20% fixed initial-account risk per trade, no compounding**, subject to the exact daily/equity drawdown rules of whichever prop firms are selected.
+
+---
+
 ## Known implementation/research issues
 
 Several workflow/code errors occurred while building the experiment harness. They are not trading losses and must not be interpreted as strategy results:
