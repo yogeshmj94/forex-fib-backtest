@@ -33,14 +33,48 @@ bool BuildSetup(const string symbol,const MqlRates &a,const MqlRates &b,
  x.direction=DIR_NONE; return false;
 }
 
+int LastSunday(int year,int month)
+{
+ MqlDateTime d;d.year=year;d.mon=month+1;d.day=1;d.hour=0;d.min=0;d.sec=0;
+ if(month==12){d.year=year+1;d.mon=1;}
+ datetime firstNext=StructToTime(d);
+ datetime last=firstNext-24*60*60;MqlDateTime x;TimeToStruct(last,x);
+ return x.day-x.day_of_week;
+}
+int NthSunday(int year,int month,int nth)
+{
+ MqlDateTime d;d.year=year;d.mon=month;d.day=1;d.hour=0;d.min=0;d.sec=0;
+ datetime first=StructToTime(d);MqlDateTime x;TimeToStruct(first,x);
+ int firstSunday=1+((7-x.day_of_week)%7);return firstSunday+7*(nth-1);
+}
+bool LondonDST(datetime utc)
+{
+ MqlDateTime x;TimeToStruct(utc,x);
+ MqlDateTime s=x,e=x;s.mon=3;s.day=LastSunday(x.year,3);s.hour=1;s.min=0;s.sec=0;
+ e.mon=10;e.day=LastSunday(x.year,10);e.hour=1;e.min=0;e.sec=0;
+ return utc>=StructToTime(s) && utc<StructToTime(e);
+}
+bool NewYorkDST(datetime utc)
+{
+ MqlDateTime x;TimeToStruct(utc,x);
+ MqlDateTime s=x,e=x;s.mon=3;s.day=NthSunday(x.year,3,2);s.hour=7;s.min=0;s.sec=0;
+ e.mon=11;e.day=NthSunday(x.year,11,1);e.hour=6;e.min=0;e.sec=0;
+ return utc>=StructToTime(s) && utc<StructToTime(e);
+}
+bool WindowOverlapsLocalSession(datetime utcStart,int utcOffsetHours)
+{
+ datetime localStart=utcStart+utcOffsetHours*60*60,localEnd=localStart+4*60*60;
+ MqlDateTime a,b;TimeToStruct(localStart,a);TimeToStruct(localEnd,b);
+ return a.hour<17 && (b.hour>8 || b.day!=a.day);
+}
 bool SessionEligibleUTC(const datetime live_start)
 {
  MqlDateTime t;TimeToStruct(live_start,t);
  if(t.day_of_week==0 || t.day_of_week==6) return false;
- // Python uses DST-aware Europe/London and America/New_York. Exact parity for
- // historical DST boundaries is validated by fixtures; this function is NOT
- // wired to trading until that parity layer is complete.
- return true;
+ int londonOffset=LondonDST(live_start)?1:0;
+ int nyOffset=NewYorkDST(live_start)?-4:-5;
+ return WindowOverlapsLocalSession(live_start,londonOffset) ||
+        WindowOverlapsLocalSession(live_start,nyOffset);
 }
 
 bool FindOBInRates(const FrozenSetup &x,const MqlRates &rates[],FrozenOB &ob)
