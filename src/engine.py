@@ -17,9 +17,10 @@ def setups_from_h4(s,h,bufp=5):
    hi,lo=a.high,b.low;out.append(Setup(s,"bearish",b.timestamp,st,en,lo+.6*(hi-lo),lo+.8*(hi-lo),hi+buf,lo))
  return out
 def find_ob(x,m):
- live=m[(m.timestamp>=x.live_start)&(m.timestamp<x.live_end)];zlo,zhi=sorted((x.fib60,x.fib80))
+ # OB must already exist before the H4 signal closes. Search Live-1 only.
+ pre=m[(m.timestamp>=x.signal_time)&(m.timestamp<x.live_start)];zlo,zhi=sorted((x.fib60,x.fib80))
  for name,rule in TFS:
-  t=resample(live,rule)
+  t=resample(pre,rule)
   for j in range(1,len(t)):
    crossed=t.iloc[j].high>=x.fib60 if x.direction=="bullish" else t.iloc[j].low<=x.fib60
    if not crossed: continue
@@ -36,7 +37,8 @@ def simulate(x,m):
  tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e;rew=x.target-e if x.direction=="bullish" else e-x.target
  if risk<=0 or rew<=0:return {"status":"invalid_ob","timeframe":tf,"ob_time":ot,"entry":e,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
  rr=rew/risk;fill=None
- for _,b in m[(m.timestamp>=ot)&(m.timestamp<x.live_end)].iterrows():
+ # Pending order becomes active only after Live-1 has closed.
+ for _,b in m[(m.timestamp>=x.live_start)&(m.timestamp<x.live_end)].iterrows():
   if b.low<=e<=b.high:fill=b.timestamp;break
  if fill is None:return {"status":"expired","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":None,"exit_time":None,"result_r":0.}
  for _,b in m[m.timestamp>=fill].iterrows():
