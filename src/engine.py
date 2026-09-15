@@ -37,9 +37,15 @@ def simulate(x,m,tp_mode="fixed2r",rr_value=2.0):
  ob=find_ob(x,m)
  if not ob:return {"status":"no_ob","timeframe":None,"ob_time":None,"entry":None,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
  tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e
- # Fixed 2R target: preserve entry and stop, set TP exactly two risks away.
- target=e+2*risk if x.direction=="bullish" else e-2*risk
- rew=2*risk
+ if tp_mode=="live1":
+  # Structural target: Live-1 extreme stored on the setup.
+  target=x.target
+  rew=target-e if x.direction=="bullish" else e-target
+ elif tp_mode=="fixed":
+  target=e+rr_value*risk if x.direction=="bullish" else e-rr_value*risk
+  rew=rr_value*risk
+ else:
+  raise ValueError(f"Unknown tp_mode: {tp_mode}")
  if risk<=0 or rew<=0:return {"status":"invalid_ob","timeframe":tf,"ob_time":ot,"entry":e,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
  rr=rew/risk;fill=None
  # Pending order becomes active only after Live-1 has closed.
