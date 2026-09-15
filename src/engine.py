@@ -33,7 +33,7 @@ def find_ob(x,m):
     if zlo<=entry<=zhi:return name,o.timestamp,entry
    break
  return None
-def simulate(x,m,tp_mode="fixed2r"):
+def simulate(x,m,tp_mode="fixed2r",rr_value=2.0):
  ob=find_ob(x,m)
  if not ob:return {"status":"no_ob","timeframe":None,"ob_time":None,"entry":None,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
  tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e
