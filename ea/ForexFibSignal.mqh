@@ -109,4 +109,32 @@ bool FindFrozenOB(const FrozenSetup &x,FrozenOB &ob)
  }
  ob.found=false;return false;
 }
+enum SimStatus { SIM_INVALID=0,SIM_EXPIRED=1,SIM_WIN=2,SIM_LOSS=3,SIM_LOSS_AMBIGUOUS=4,SIM_OPEN=5 };
+struct SimResult { SimStatus status;datetime fill_time,exit_time;double target,result_r; };
+
+bool SimulateFrozenLifecycle(const FrozenSetup &x,const FrozenOB &ob,
+                             const MqlRates &m1[],SimResult &out)
+{
+ double bufferedStop=x.direction==DIR_BULL
+   ? x.structural_stop-StopBufferPips*PipSize(x.symbol)
+   : x.structural_stop+StopBufferPips*PipSize(x.symbol);
+ double risk=x.direction==DIR_BULL ? ob.entry-bufferedStop : bufferedStop-ob.entry;
+ if(risk<=0){out.status=SIM_INVALID;return false;}
+ out.target=x.direction==DIR_BULL ? ob.entry+TakeProfitR*risk : ob.entry-TakeProfitR*risk;
+ int n=ArraySize(m1),fill=-1;
+ for(int i=0;i<n;i++){
+   if(m1[i].time<x.live_start || m1[i].time>=x.live_end) continue;
+   if(m1[i].low<=ob.entry && ob.entry<=m1[i].high){fill=i;out.fill_time=m1[i].time;break;}
+ }
+ if(fill<0){out.status=SIM_EXPIRED;out.result_r=0;return true;}
+ for(int i=fill;i<n;i++){
+   bool sl=x.direction==DIR_BULL ? m1[i].low<=bufferedStop : m1[i].high>=bufferedStop;
+   bool tp=x.direction==DIR_BULL ? m1[i].high>=out.target : m1[i].low<=out.target;
+   if(sl&&tp){out.status=SIM_LOSS_AMBIGUOUS;out.exit_time=m1[i].time;out.result_r=-1;return true;}
+   if(sl){out.status=SIM_LOSS;out.exit_time=m1[i].time;out.result_r=-1;return true;}
+   if(tp){out.status=SIM_WIN;out.exit_time=m1[i].time;out.result_r=TakeProfitR;return true;}
+ }
+ out.status=SIM_OPEN;out.result_r=0;return true;
+}
+
 #endif
