@@ -17,7 +17,7 @@ def setups_from_h4(s,h,bufp=5):
    hi,lo=a.high,b.low;out.append(Setup(s,"bearish",b.timestamp,st,en,lo+.6*(hi-lo),lo+.8*(hi-lo),hi+buf,lo))
  return out
 def find_ob(x,m):
- # OB must already exist before the H4 signal closes. Search Live-1 only.
+ # OB must exist before Live begins and may form in Live-2 or Live-1.
  pre_start=x.signal_time-pd.Timedelta(hours=4)\n pre=m[(m.timestamp>=pre_start)&(m.timestamp<x.live_start)];zlo,zhi=sorted((x.fib60,x.fib80))
  for name,rule in TFS:
   t=resample(pre,rule)
