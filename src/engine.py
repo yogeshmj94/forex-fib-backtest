@@ -18,7 +18,7 @@ def setups_from_h4(s,h,bufp=5):
  return out
 def find_ob(x,m):
  # OB must already exist before the H4 signal closes. Search Live-1 only.
- pre=m[(m.timestamp>=x.signal_time)&(m.timestamp<x.live_start)];zlo,zhi=sorted((x.fib60,x.fib80))
+ pre_start=x.signal_time-pd.Timedelta(hours=4)\n pre=m[(m.timestamp>=pre_start)&(m.timestamp<x.live_start)];zlo,zhi=sorted((x.fib60,x.fib80))
  for name,rule in TFS:
   t=resample(pre,rule)
   for j in range(1,len(t)):
