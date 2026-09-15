@@ -1,6 +1,6 @@
 {
   "fib_retracement": 0.60,
-  "stop_buffer_pips": 5.0,
+  "stop_buffer_pips": 3.0,
   "risk_per_trade_pct": 1.0,
   "pairs": ["EURUSD","GBPUSD","USDJPY","USDCHF","USDCAD","AUDUSD","NZDUSD","EURGBP","EURJPY","GBPJPY","EURCHF","AUDJPY","CADJPY","CHFJPY","EURNZD","EURAUD","GBPAUD","GBPCAD","GBPNZD","AUDCAD"]
 }
