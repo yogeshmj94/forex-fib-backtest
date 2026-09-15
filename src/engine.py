@@ -34,7 +34,10 @@ def find_ob(x,m):
 def simulate(x,m):
  ob=find_ob(x,m)
  if not ob:return {"status":"no_ob","timeframe":None,"ob_time":None,"entry":None,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
- tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e;rew=x.target-e if x.direction=="bullish" else e-x.target
+ tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e
+ # Fixed 2R target: preserve entry and stop, set TP exactly two risks away.
+ target=e+2*risk if x.direction=="bullish" else e-2*risk
+ rew=2*risk
  if risk<=0 or rew<=0:return {"status":"invalid_ob","timeframe":tf,"ob_time":ot,"entry":e,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
  rr=rew/risk;fill=None
  # Pending order becomes active only after Live-1 has closed.
@@ -42,8 +45,8 @@ def simulate(x,m):
   if b.low<=e<=b.high:fill=b.timestamp;break
  if fill is None:return {"status":"expired","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":None,"exit_time":None,"result_r":0.}
  for _,b in m[m.timestamp>=fill].iterrows():
-  sl=b.low<=x.stop if x.direction=="bullish" else b.high>=x.stop;tp=b.high>=x.target if x.direction=="bullish" else b.low<=x.target
-  if sl and tp:return {"status":"loss_ambiguous","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":-1.}
+  sl=b.low<=x.stop if x.direction=="bullish" else b.high>=x.stop;tp=b.high>=target if x.direction=="bullish" else b.low<=target
+  if sl and tp:return {"status":"loss_ambiguous","timeframe":tf,"ob_time":ot,"entry":e,"target":target,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":-1.}
   if sl:return {"status":"loss","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":-1.}
-  if tp:return {"status":"win","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":rr}
+  if tp:return {"status":"win","timeframe":tf,"ob_time":ot,"entry":e,"target":target,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":rr}
  return {"status":"open","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":None,"result_r":0.}
