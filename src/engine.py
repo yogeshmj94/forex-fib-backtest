@@ -1,48 +1,47 @@
 from dataclasses import dataclass
 import pandas as pd
-
-def pip_size(symbol): return 0.01 if symbol.endswith("JPY") else 0.0001
-
-def to_h4(m1):
-    x=m1.set_index("timestamp")
-    return x.resample("4h",origin="start_day",label="left",closed="left").agg({"open":"first","high":"max","low":"min","close":"last"}).dropna().reset_index()
-
+TFS=[("M15","15min"),("M5","5min"),("M3","3min"),("M2","2min"),("M1","1min")]
+def pip_size(s): return .01 if s.endswith("JPY") else .0001
+def resample(d,r): return d.set_index("timestamp").resample(r,origin="start_day",label="left",closed="left").agg({"open":"first","high":"max","low":"min","close":"last"}).dropna().reset_index()
+def to_h4(m): return resample(m,"4h")
 @dataclass
-class Order:
-    symbol:str; direction:str; signal_time:object; live_start:object; live_end:object
-    entry:float; stop:float; target:float; rr:float
-
-def orders_from_h4(symbol,h4,fib=.60,buffer_pips=5):
-    out=[]; buf=buffer_pips*pip_size(symbol)
-    for i in range(2,len(h4)):
-        a,b=h4.iloc[i-2],h4.iloc[i-1]
-        live_start=h4.iloc[i].timestamp; live_end=live_start+pd.Timedelta(hours=4)
-        if b.close>a.high:
-            hi,lo=b.high,a.low; entry=hi-fib*(hi-lo); stop=lo-buf; target=hi
-            risk=entry-stop; reward=target-entry
-            if risk>0: out.append(Order(symbol,"bullish",b.timestamp,live_start,live_end,entry,stop,target,reward/risk))
-        elif b.close<a.low:
-            hi,lo=a.high,b.low; entry=lo+fib*(hi-lo); stop=hi+buf; target=lo
-            risk=stop-entry; reward=entry-target
-            if risk>0: out.append(Order(symbol,"bearish",b.timestamp,live_start,live_end,entry,stop,target,reward/risk))
-    return out
-
-def simulate(order,m1):
-    live=m1[(m1.timestamp>=order.live_start)&(m1.timestamp<order.live_end)]
-    fill=None
-    for _,bar in live.iterrows():
-        if bar.low<=order.entry<=bar.high:
-            fill=bar.timestamp; break
-    if fill is None:
-        return {"status":"expired","fill_time":None,"exit_time":None,"result_r":0.0}
-    after=m1[m1.timestamp>=fill]
-    for _,bar in after.iterrows():
-        if order.direction=="bullish":
-            sl=bar.low<=order.stop; tp=bar.high>=order.target
-        else:
-            sl=bar.high>=order.stop; tp=bar.low<=order.target
-        if sl and tp:
-            return {"status":"loss_ambiguous","fill_time":fill,"exit_time":bar.timestamp,"result_r":-1.0}
-        if sl: return {"status":"loss","fill_time":fill,"exit_time":bar.timestamp,"result_r":-1.0}
-        if tp: return {"status":"win","fill_time":fill,"exit_time":bar.timestamp,"result_r":order.rr}
-    return {"status":"open","fill_time":fill,"exit_time":None,"result_r":0.0}
+class Setup:
+ symbol:str;direction:str;signal_time:object;live_start:object;live_end:object;fib60:float;fib80:float;stop:float;target:float
+def setups_from_h4(s,h,bufp=5):
+ out=[];buf=bufp*pip_size(s)
+ for i in range(2,len(h)):
+  a,b=h.iloc[i-2],h.iloc[i-1];st=h.iloc[i].timestamp;en=st+pd.Timedelta(hours=4)
+  if b.close>a.high:
+   hi,lo=b.high,a.low;out.append(Setup(s,"bullish",b.timestamp,st,en,hi-.6*(hi-lo),hi-.8*(hi-lo),lo-buf,hi))
+  elif b.close<a.low:
+   hi,lo=a.high,b.low;out.append(Setup(s,"bearish",b.timestamp,st,en,lo+.6*(hi-lo),lo+.8*(hi-lo),hi+buf,lo))
+ return out
+def find_ob(x,m):
+ live=m[(m.timestamp>=x.live_start)&(m.timestamp<x.live_end)];zlo,zhi=sorted((x.fib60,x.fib80))
+ for name,rule in TFS:
+  t=resample(live,rule)
+  for j in range(1,len(t)):
+   crossed=t.iloc[j].high>=x.fib60 if x.direction=="bullish" else t.iloc[j].low<=x.fib60
+   if not crossed: continue
+   for k in range(j-1,-1,-1):
+    o=t.iloc[k];opp=o.close<o.open if x.direction=="bullish" else o.close>o.open
+    if not opp: continue
+    entry=o.low if x.direction=="bullish" else o.high
+    if zlo<=entry<=zhi:return name,o.timestamp,entry
+   break
+ return None
+def simulate(x,m):
+ ob=find_ob(x,m)
+ if not ob:return {"status":"no_ob","timeframe":None,"ob_time":None,"entry":None,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
+ tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e;rew=x.target-e if x.direction=="bullish" else e-x.target
+ if risk<=0 or rew<=0:return {"status":"invalid_ob","timeframe":tf,"ob_time":ot,"entry":e,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
+ rr=rew/risk;fill=None
+ for _,b in m[(m.timestamp>=ot)&(m.timestamp<x.live_end)].iterrows():
+  if b.low<=e<=b.high:fill=b.timestamp;break
+ if fill is None:return {"status":"expired","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":None,"exit_time":None,"result_r":0.}
+ for _,b in m[m.timestamp>=fill].iterrows():
+  sl=b.low<=x.stop if x.direction=="bullish" else b.high>=x.stop;tp=b.high>=x.target if x.direction=="bullish" else b.low<=x.target
+  if sl and tp:return {"status":"loss_ambiguous","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":-1.}
+  if sl:return {"status":"loss","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":-1.}
+  if tp:return {"status":"win","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":b.timestamp,"result_r":rr}
+ return {"status":"open","timeframe":tf,"ob_time":ot,"entry":e,"rr":rr,"fill_time":fill,"exit_time":None,"result_r":0.}
