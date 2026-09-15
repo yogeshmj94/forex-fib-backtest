@@ -62,7 +62,10 @@ jobs:
 
       - name: Run backtest
         run: |
-          for B in 0 2 3 5 7 10; do\n            echo "=== Buffer ${B} pips ==="\n            python -m src.backtest --data-dir data --out-dir "results/buffer-${B}" --buffer-pips "$B"\n          done
+          for B in 0 2 3 5 7 10; do
+            echo "=== Buffer ${B} pips ==="
+            python -m src.backtest --data-dir data --out-dir "results/buffer-${B}" --buffer-pips "$B"
+          done
           test -s results/buffer-5/trades.csv || { echo "::error::buffer sweep results missing"; exit 1; }
           python - <<'PY'
           import json
