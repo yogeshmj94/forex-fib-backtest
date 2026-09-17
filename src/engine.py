@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import pandas as pd
-TFS=[("M15","15min"),("M5","5min"),("M3","3min"),("M2","2min"),("M1","1min")]
+# M2/M1 intentionally excluded for this experiment. Keep priority M15 -> M5 -> M3.
+TFS=[("M15","15min"),("M5","5min"),("M3","3min")]
 def pip_size(s): return .01 if s.endswith("JPY") else .0001
 def resample(d,r): return d.set_index("timestamp").resample(r,origin="start_day",label="left",closed="left").agg({"open":"first","high":"max","low":"min","close":"last"}).dropna().reset_index()
 def to_h4(m): return resample(m,"4h")
