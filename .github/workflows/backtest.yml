@@ -58,7 +58,7 @@ jobs:
           PY
           test "$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)" -eq 20
 
-      - name: Run 3 pip D1 structural-target backtest with momentum diagnostics
+      - name: Run 3 pip D1 structural-target backtest with combination diagnostics
         shell: bash
         run: |
           set -euo pipefail
@@ -69,25 +69,52 @@ jobs:
           import pandas as pd
           p="results/d1-structure/trades.csv"
           d=pd.read_csv(p)
-          required=["live2_low","live2_high","live2_close","live1_open","live1_high","live1_low","live1_close","impulse_pips","breakout_pips","momentum_pct","live1_d1_high","live1_d1_low","d1_target","htf_room_pips","structural_room_pct","htf_valid","live2_d1_proximity_pips","live2_d1_interaction","live2_d1_swept","live2_d1_reclaimed"]
+          required=["live2_low","live2_high","live2_close","impulse_pips","breakout_pips","momentum_pct","live1_d1_high","live1_d1_low","htf_room_pips","structural_room_pct","htf_valid","live2_d1_proximity_pips","live2_d1_interaction","live2_d1_swept","live2_d1_reclaimed"]
           missing=[c for c in required if c not in d.columns]
           assert not missing, missing
           valid=d[d.htf_valid.astype(str).str.lower()=="true"]
           invalid=d[d.status=="invalid_htf_structure"]
           filled=valid[valid.status.isin(["win","loss","loss_ambiguous"])].copy()
+          filled["is_win"]=(filled.status=="win").astype(int)
           print("HTF-valid setups:",len(valid))
           print("HTF-invalidated setups:",len(invalid))
           print("Filled valid trades:",len(filled))
-          print("\nLive-2 H4 vs Live-1 D1 interaction buckets (negative = sweep):")
-          if len(filled):
-           filled["is_win"]=(filled.status=="win").astype(int)
-           bucket=filled.groupby("live2_d1_interaction",dropna=False).agg(trades=("status","size"),wins=("is_win","sum"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum"),avg_proximity_pips=("live2_d1_proximity_pips","mean"))
-           print(bucket.to_string())
-           print("\nSweep only by reclaim:")
-           swept=filled[filled.live2_d1_swept.astype(str).str.lower()=="true"]
-           if len(swept): print(swept.groupby("live2_d1_reclaimed").agg(trades=("status","size"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum")).to_string())
-          print("\nSample filled trades:")
-          print(filled[["symbol","direction","signal_time","live2_d1_proximity_pips","live2_d1_interaction","live2_d1_swept","live2_d1_reclaimed","impulse_pips","momentum_pct","htf_room_pips","status","result_r"]].head(20).to_string(index=False))
+
+          print("\nLive-2 H4 vs Live-1 D1 interaction buckets:")
+          bucket=filled.groupby("live2_d1_interaction",dropna=False).agg(trades=("status","size"),wins=("is_win","sum"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum"))
+          print(bucket.to_string())
+
+          # Combination diagnostics only: these do not alter trade eligibility.
+          filled["impulse_bucket"]=pd.cut(filled.impulse_pips,[-float("inf"),15,25,35,50,float("inf")],labels=["<=15","15-25","25-35","35-50",">50"],include_lowest=True)
+          filled["momentum_bucket"]=pd.cut(filled.momentum_pct,[-float("inf"),10,20,30,40,float("inf")],labels=["<=10","10-20","20-30","30-40",">40"],include_lowest=True)
+          filled["room_bucket"]=pd.cut(filled.structural_room_pct,[-float("inf"),25,50,75,100,float("inf")],labels=["<=25","25-50","50-75","75-100",">100"],include_lowest=True)
+          filled["impulse_room_ratio"]=filled.impulse_pips/filled.htf_room_pips.where(filled.htf_room_pips>0)
+          filled["impulse_room_bucket"]=pd.cut(filled.impulse_room_ratio,[-float("inf"),0.25,0.5,1,2,float("inf")],labels=["<=0.25","0.25-0.5","0.5-1","1-2",">2"],include_lowest=True)
+
+          dims=["live2_d1_interaction","impulse_bucket","momentum_bucket","room_bucket","impulse_room_bucket"]
+          combo=filled.groupby(dims,observed=True,dropna=False).agg(trades=("status","size"),wins=("is_win","sum"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum"),avg_impulse=("impulse_pips","mean"),avg_momentum=("momentum_pct","mean"),avg_htf_room=("htf_room_pips","mean"),avg_structural_room=("structural_room_pct","mean")).reset_index()
+          combo=combo.sort_values(["trades","avg_r"],ascending=[False,False])
+          combo.to_csv("results/d1-structure/combination_diagnostics.csv",index=False)
+          print("\nCOMBINATION DIAGNOSTICS — cells with >= 10 trades, ranked by avg R:")
+          robust=combo[combo.trades>=10].sort_values(["avg_r","trades"],ascending=[False,False])
+          print(robust.head(40).to_string(index=False))
+          print("\nWorst combination cells with >= 10 trades:")
+          print(robust.tail(25).sort_values("avg_r").to_string(index=False))
+
+          # Simpler two-way tables help identify which interaction is doing the work.
+          for a,b in [("impulse_bucket","momentum_bucket"),("impulse_room_bucket","momentum_bucket"),("live2_d1_interaction","impulse_room_bucket"),("live2_d1_interaction","momentum_bucket")]:
+           t=filled.groupby([a,b],observed=True).agg(trades=("status","size"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum")).reset_index()
+           print(f"\n{a} x {b} (>=10 trades):")
+           print(t[t.trades>=10].sort_values("avg_r",ascending=False).to_string(index=False))
+
+          # Pair consistency for promising combination cells rather than selecting pairs post-hoc.
+          if len(robust):
+           keys=robust.head(15)[dims]
+           tagged=filled.merge(keys,on=dims,how="inner")
+           pair=tagged.groupby(dims+["symbol"],observed=True).agg(trades=("status","size"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum")).reset_index()
+           pair.to_csv("results/d1-structure/top_combination_pair_consistency.csv",index=False)
+           print("\nPair consistency for top combination cells:")
+           print(pair.to_string(index=False))
           PY
 
       - name: Upload D1 structural results
