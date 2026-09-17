@@ -69,16 +69,25 @@ jobs:
           import pandas as pd
           p="results/d1-structure/trades.csv"
           d=pd.read_csv(p)
-          required=["live2_low","live2_high","live1_open","live1_high","live1_low","live1_close","impulse_pips","breakout_pips","momentum_pct","live1_d1_high","live1_d1_low","d1_target","htf_room_pips","structural_room_pct","htf_valid"]
+          required=["live2_low","live2_high","live2_close","live1_open","live1_high","live1_low","live1_close","impulse_pips","breakout_pips","momentum_pct","live1_d1_high","live1_d1_low","d1_target","htf_room_pips","structural_room_pct","htf_valid","live2_d1_proximity_pips","live2_d1_interaction","live2_d1_swept","live2_d1_reclaimed"]
           missing=[c for c in required if c not in d.columns]
           assert not missing, missing
           valid=d[d.htf_valid.astype(str).str.lower()=="true"]
           invalid=d[d.status=="invalid_htf_structure"]
-          filled=valid[valid.status.isin(["win","loss","loss_ambiguous"])]
+          filled=valid[valid.status.isin(["win","loss","loss_ambiguous"])].copy()
           print("HTF-valid setups:",len(valid))
           print("HTF-invalidated setups:",len(invalid))
           print("Filled valid trades:",len(filled))
-          print(filled[["symbol","direction","signal_time","impulse_pips","momentum_pct","htf_room_pips","structural_room_pct","d1_target","status","result_r"]].head(20).to_string(index=False))
+          print("\nLive-2 H4 vs Live-1 D1 interaction buckets (negative = sweep):")
+          if len(filled):
+           filled["is_win"]=(filled.status=="win").astype(int)
+           bucket=filled.groupby("live2_d1_interaction",dropna=False).agg(trades=("status","size"),wins=("is_win","sum"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum"),avg_proximity_pips=("live2_d1_proximity_pips","mean"))
+           print(bucket.to_string())
+           print("\nSweep only by reclaim:")
+           swept=filled[filled.live2_d1_swept.astype(str).str.lower()=="true"]
+           if len(swept): print(swept.groupby("live2_d1_reclaimed").agg(trades=("status","size"),win_rate_pct=("is_win",lambda x:100*x.mean()),avg_r=("result_r","mean"),total_r=("result_r","sum")).to_string())
+          print("\nSample filled trades:")
+          print(filled[["symbol","direction","signal_time","live2_d1_proximity_pips","live2_d1_interaction","live2_d1_swept","live2_d1_reclaimed","impulse_pips","momentum_pct","htf_room_pips","status","result_r"]].head(20).to_string(index=False))
           PY
 
       - name: Upload D1 structural results
