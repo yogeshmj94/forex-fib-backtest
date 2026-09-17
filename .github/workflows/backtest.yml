@@ -1,4 +1,4 @@
-name: Backtest 3pip Live-1 momentum diagnostic - 12 months
+name: Backtest 3pip D1 structural target + momentum - 12 months
 on:
   workflow_dispatch:
 permissions:
@@ -45,41 +45,45 @@ jobs:
             cp "$SRC" "data/$P.csv"
           done
 
-      - name: Validate cached data and momentum code
+      - name: Validate cached data and structural code
         shell: bash
         run: |
           set -euo pipefail
           python -m py_compile src/engine.py src/backtest.py src/metrics.py
           python - <<'PY'
-          from src.engine import TFS
+          from src.engine import TFS,to_d1
           assert [x[0] for x in TFS] == ["M15","M5","M3"], TFS
           print("OB timeframes verified: M15, M5, M3 only")
+          print("D1 structural resampler available")
           PY
           test "$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)" -eq 20
 
-      - name: Run 3 pip Live-1 backtest with momentum diagnostics
+      - name: Run 3 pip D1 structural-target backtest with momentum diagnostics
         shell: bash
         run: |
           set -euo pipefail
-          python -m src.backtest --data-dir data --out-dir results/momentum --buffer-pips 3 --tp-mode live1 --rr 2
-          test -s results/momentum/trades.csv
-          test -s results/momentum/summary.json
+          python -m src.backtest --data-dir data --out-dir results/d1-structure --buffer-pips 3 --tp-mode live1 --rr 2
+          test -s results/d1-structure/trades.csv
+          test -s results/d1-structure/summary.json
           python - <<'PY'
           import pandas as pd
-          p="results/momentum/trades.csv"
+          p="results/d1-structure/trades.csv"
           d=pd.read_csv(p)
-          required=["live2_low","live2_high","live1_open","live1_high","live1_low","live1_close","impulse_pips","breakout_pips","momentum_pct"]
+          required=["live2_low","live2_high","live1_open","live1_high","live1_low","live1_close","impulse_pips","breakout_pips","momentum_pct","live1_d1_high","live1_d1_low","d1_target","htf_room_pips","structural_room_pct","htf_valid"]
           missing=[c for c in required if c not in d.columns]
           assert not missing, missing
-          filled=d[d.status.isin(["win","loss","loss_ambiguous"])]
-          print("Filled trades:",len(filled))
-          print("Momentum diagnostics present:",required)
-          print(filled[["symbol","direction","signal_time","impulse_pips","breakout_pips","momentum_pct","status","result_r"]].head(20).to_string(index=False))
+          valid=d[d.htf_valid.astype(str).str.lower()=="true"]
+          invalid=d[d.status=="invalid_htf_structure"]
+          filled=valid[valid.status.isin(["win","loss","loss_ambiguous"])]
+          print("HTF-valid setups:",len(valid))
+          print("HTF-invalidated setups:",len(invalid))
+          print("Filled valid trades:",len(filled))
+          print(filled[["symbol","direction","signal_time","impulse_pips","momentum_pct","htf_room_pips","structural_room_pct","d1_target","status","result_r"]].head(20).to_string(index=False))
           PY
 
-      - name: Upload momentum results
+      - name: Upload D1 structural results
         uses: actions/upload-artifact@v4
         with:
-          name: momentum-3pip-live1-2025-09-15_2026-09-15
-          path: results/momentum/
+          name: d1-structure-3pip-live1-2025-09-15_2026-09-15
+          path: results/d1-structure/
           retention-days: 30
