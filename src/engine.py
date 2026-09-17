@@ -5,6 +5,7 @@ TFS=[("M15","15min"),("M5","5min"),("M3","3min")]
 def pip_size(s): return .01 if s.endswith("JPY") else .0001
 def resample(d,r): return d.set_index("timestamp").resample(r,origin="start_day",label="left",closed="left").agg({"open":"first","high":"max","low":"min","close":"last"}).dropna().reset_index()
 def to_h4(m): return resample(m,"4h")
+def to_d1(m): return resample(m,"1D")
 @dataclass
 class Setup:
  symbol:str;direction:str;signal_time:object;live_start:object;live_end:object;fib60:float;fib80:float;stop:float;target:float
@@ -39,7 +40,8 @@ def simulate(x,m,tp_mode="fixed2r",rr_value=2.0):
  if not ob:return {"status":"no_ob","timeframe":None,"ob_time":None,"entry":None,"rr":None,"fill_time":None,"exit_time":None,"result_r":0.}
  tf,ot,e=ob;risk=e-x.stop if x.direction=="bullish" else x.stop-e
  if tp_mode=="live1":
-  # Structural target: Live-1 extreme stored on the setup.
+  # Structural target is supplied on the setup. Research runs may replace the
+  # original H4 extreme with a completed higher-timeframe structural target.
   target=x.target
   rew=target-e if x.direction=="bullish" else e-target
  elif tp_mode=="fixed":
