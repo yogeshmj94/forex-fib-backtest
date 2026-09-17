@@ -1,4 +1,4 @@
-name: Backtest M15-M3 OB parameter grid - 12 months
+name: Backtest 3pip Live-1 momentum diagnostic - 12 months
 on:
   workflow_dispatch:
 permissions:
@@ -6,7 +6,7 @@ permissions:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 180
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -27,7 +27,7 @@ jobs:
           path: data
           key: dukascopy-m1-2025-09-15-2026-09-15-v1
 
-      - name: Download 12 months M1 bid data
+      - name: Download data only if cache is unavailable
         if: steps.cache-data.outputs.cache-hit != 'true'
         shell: bash
         run: |
@@ -43,12 +43,9 @@ jobs:
             SRC="$(find raw -type f -iname '*.csv' | head -n 1 || true)"
             test -n "$SRC" || { echo "::error::No CSV produced for $P"; exit 1; }
             cp "$SRC" "data/$P.csv"
-            test -s "data/$P.csv" || { echo "::error::Empty CSV for $P"; exit 1; }
           done
-          COUNT="$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)"
-          test "$COUNT" -eq 20 || { echo "::error::Expected 20 CSVs, found $COUNT"; exit 1; }
 
-      - name: Validate code and cached data
+      - name: Validate cached data and momentum code
         shell: bash
         run: |
           set -euo pipefail
@@ -60,44 +57,29 @@ jobs:
           PY
           test "$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)" -eq 20
 
-      - name: Run 18-case TP and SL-buffer grid
+      - name: Run 3 pip Live-1 backtest with momentum diagnostics
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p results/grid
-          for B in 0.5 1 1.5 2 2.5 3; do
-            for SPEC in "fixed:1:1R" "fixed:1.5:1.5R" "live1:2:live1-high"; do
-              IFS=: read -r MODE RR LABEL <<< "$SPEC"
-              OUT="results/grid/buffer-${B}_tp-${LABEL}"
-              echo "=== buffer=${B} tp=${LABEL} ==="
-              python -m src.backtest --data-dir data --out-dir "$OUT" --buffer-pips "$B" --tp-mode "$MODE" --rr "$RR"
-              test -s "$OUT/trades.csv"
-              test -s "$OUT/summary.json"
-            done
-          done
-
-      - name: Build grid comparison
-        shell: bash
-        run: |
+          python -m src.backtest --data-dir data --out-dir results/momentum --buffer-pips 3 --tp-mode live1 --rr 2
+          test -s results/momentum/trades.csv
+          test -s results/momentum/summary.json
           python - <<'PY'
-          import csv,json
-          from pathlib import Path
-          rows=[]
-          for p in sorted(Path("results/grid").glob("*/summary.json")):
-              d=json.loads(p.read_text()); o=d["overall"]
-              rows.append({"case":p.parent.name,"buffer_pips":d["buffer_pips"],"tp_mode":d["tp_mode"],"rr_value":d["rr_value"],**o})
-          assert len(rows)==18, len(rows)
-          keys=list(rows[0])
-          with open("results/grid-comparison.csv","w",newline="") as f:
-              w=csv.DictWriter(f,fieldnames=keys);w.writeheader();w.writerows(rows)
-          print("Completed 18 cases")
-          for r in sorted(rows,key=lambda x:x.get("expectancy_r",-999),reverse=True):
-              print(r["case"],"WR=",r.get("win_rate_pct"),"ExpR=",r.get("expectancy_r"),"TotalR=",r.get("cumulative_r"),"DD_R=",r.get("max_drawdown_r"))
+          import pandas as pd
+          p="results/momentum/trades.csv"
+          d=pd.read_csv(p)
+          required=["live2_low","live2_high","live1_open","live1_high","live1_low","live1_close","impulse_pips","breakout_pips","momentum_pct"]
+          missing=[c for c in required if c not in d.columns]
+          assert not missing, missing
+          filled=d[d.status.isin(["win","loss","loss_ambiguous"])]
+          print("Filled trades:",len(filled))
+          print("Momentum diagnostics present:",required)
+          print(filled[["symbol","direction","signal_time","impulse_pips","breakout_pips","momentum_pct","status","result_r"]].head(20).to_string(index=False))
           PY
 
-      - name: Upload grid results
+      - name: Upload momentum results
         uses: actions/upload-artifact@v4
         with:
-          name: m15-m3-ob-grid-2025-09-15_2026-09-15
-          path: results/
+          name: momentum-3pip-live1-2025-09-15_2026-09-15
+          path: results/momentum/
           retention-days: 30
