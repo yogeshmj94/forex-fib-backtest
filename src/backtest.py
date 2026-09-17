@@ -22,8 +22,14 @@ def main():
    london=(lon_st.hour < 17 and (lon_en.hour > 8 or lon_en.date()!=lon_st.date()))
    newyork=(ny_st.hour < 17 and (ny_en.hour > 8 or ny_en.date()!=ny_st.date()))
    if not (london or newyork): continue
-   live1=h_by_time.loc[x.signal_time]
-   live2=h_by_time.loc[x.signal_time-pd.Timedelta(hours=4)]
+   # Use the actual preceding H4 candle rather than assuming it is exactly
+   # four clock-hours earlier. This survives gaps in the source M1 series and
+   # matches the positional Live-2 candle used by setup construction.
+   pos=h_by_time.index.get_indexer([x.signal_time])[0]
+   if pos <= 0:
+    continue
+   live1=h_by_time.iloc[pos]
+   live2=h_by_time.iloc[pos-1]
    ps=pip_size(s)
    if x.direction=="bullish":
     impulse_pips=(live1.high-live2.low)/ps
