@@ -55,8 +55,8 @@ jobs:
           assert cfg["stop_buffer_pips"] == 3.0, cfg
           assert cfg["risk_per_trade_pct"] == 0.3, cfg
           assert len(cfg["pairs"]) == 20, len(cfg["pairs"])
-          assert [x[0] for x in TFS] == ["M15", "M5", "M2"], TFS
-          print("Frozen production strategy verified: M15/M5/M2 OB, 3-pip buffer, fixed 1R, 20 pairs")
+          assert [x[0] for x in TFS] == ["M15", "M5", "M3"], TFS
+          print("Frozen production strategy verified: M15/M5/M3 OB, 3-pip buffer, fixed 1R, 20 pairs")
           PY
           test "$(find data -maxdepth 1 -type f -name '*.csv' | wc -l)" -eq 20
 
@@ -82,6 +82,6 @@ jobs:
       - name: Upload production results
         uses: actions/upload-artifact@v4
         with:
-          name: forex-fib-production-m15-m5-m2-2023-09-15_2025-09-15
+          name: forex-fib-production-m15-m5-m3-2023-09-15_2025-09-15
           path: results/
           retention-days: 30

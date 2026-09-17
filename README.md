@@ -10,7 +10,7 @@ Backtester for the 20-pair H4 scanner strategy.
 - Bullish SL: Live-2 low - 3 pips. TP: fixed 1R from entry.
 - Bearish SL: Live-2 high + 3 pips. TP: fixed 1R from entry.
 - Once entered, trade remains open until TP or SL.
-- Production OB search priority: M15, M5, then M2. M1 and M3 OBs are excluded.
+- Production OB search priority: M15, M5, then M3. M1 and M2 OBs are excluded.
 - M1 data resolves execution ordering.
 - Bid-candle model; optional spread/slippage can be configured later.
 

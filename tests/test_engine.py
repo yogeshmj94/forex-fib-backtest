@@ -28,7 +28,7 @@ def pre_live_ob_rows():
 
 
 def test_production_ob_timeframes():
-    assert TFS == [("M15", "15min"), ("M5", "5min"), ("M2", "2min")]
+    assert TFS == [("M15", "15min"), ("M5", "5min"), ("M3", "3min")]
 
 
 def test_bullish_order_and_fill_win():

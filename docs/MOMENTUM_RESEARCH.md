@@ -300,8 +300,8 @@ test, not a current filter.
 - Restore the frozen H4/session/entry framework, 3-pip buffer and fixed 1R TP.
 - Do not use D1 targets, D1/H4 invalidation, D1 proximity, sweep/reclaim,
   impulse, momentum or structural-room filters in production.
-- Use M15, M5 and M2 for production OB detection, in that priority order.
-- Exclude M3 and M1 from OB detection. Continue using M1 price data to resolve
+- Use M15, M5 and M3 for production OB detection, in that priority order.
+- Exclude M2 and M1 from OB detection. Continue using M1 price data to resolve
   fills and same-candle TP/SL ordering.
 - Retain all 20 currency pairs and all other production parameters.
 

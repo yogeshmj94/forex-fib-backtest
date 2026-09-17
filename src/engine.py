@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import pandas as pd
-# Production OB priority. M1 and M3 were removed after the timeframe review.
-TFS=[("M15","15min"),("M5","5min"),("M2","2min")]
+# Production OB priority. M1 and M2 are excluded.
+TFS=[("M15","15min"),("M5","5min"),("M3","3min")]
 def pip_size(s): return .01 if s.endswith("JPY") else .0001
 def resample(d,r): return d.set_index("timestamp").resample(r,origin="start_day",label="left",closed="left").agg({"open":"first","high":"max","low":"min","close":"last"}).dropna().reset_index()
 def to_h4(m): return resample(m,"4h")

@@ -12,7 +12,7 @@ The strategy is evaluated as a portfolio across 20 liquid FX pairs. Results are 
 - Once a parameter is frozen, later out-of-sample (OOS) data is not used to retune it.
 - Invalid runs caused by implementation/workflow bugs are retained in the history but excluded from trading conclusions.
 - Risk percentages below are fixed percentages of initial account size; no compounding is assumed.
-- The current frozen trading configuration is **M15/M5/M2 OB detection + 3-pip stop buffer + fixed 1R TP**.
+- The current frozen trading configuration is **M15/M5/M3 OB detection + 3-pip stop buffer + fixed 1R TP**.
 - Current risk model is **0.30% of initial account size per trade, fixed, no compounding**.
 
 ## Frozen configuration
@@ -22,12 +22,12 @@ The strategy is evaluated as a portfolio across 20 liquid FX pairs. Results are 
 | Universe | 20 FX pairs |
 | Stop buffer | 3 pips |
 | Take profit | Fixed 1R |
-| OB timeframes (priority) | M15, M5, M2 |
+| OB timeframes (priority) | M15, M5, M3 |
 | Risk per trade | 0.30% of initial account size |
 | Compounding | None |
 | Entry / session rules | Unchanged from optimisation implementation |
 
-M1 and M3 are not production OB-detection timeframes. M1 market data remains
+M1 and M2 are not production OB-detection timeframes. M1 market data remains
 the execution-resolution input used to determine fills and TP/SL ordering; this
 is distinct from using an M1 candle to select an order block.
 
