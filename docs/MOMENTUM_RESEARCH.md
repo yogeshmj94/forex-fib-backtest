@@ -203,6 +203,108 @@ The narrow 20–35% band looks attractive historically, but selecting both lower
 6. There is no evidence here to justify permanently dropping GBPUSD or any other pair. The correct next test is whether a simple momentum rule improves pair consistency on independent data.
 7. No production rule has been changed by this analysis.
 
+## Follow-up D1 structural-target research
+
+These later experiments used the same 15 Sep 2025–15 Sep 2026 research period
+and the experimental M15/M5/M3 OB set. They are documented here so rejected
+ideas and useful interactions are not lost. None of the D1 variables below is
+part of the production strategy.
+
+### Completed D1 extreme as target and H4-room filter
+
+**Run:** GitHub Actions run 35208313846
+
+For bullish setups, the completed Live-1 D1 high replaced the Live-1 H4 high as
+the structural target; bearish setups mirrored this with the D1 low. A setup
+was invalid if the D1 target was at or behind the Live-1 H4 extreme, including
+equality. The equality rule represented the assumption that spread may already
+have consumed an apparently equal liquidity level.
+
+| Diagnostic | Result |
+|---|---:|
+| Initial setups | 10,974 |
+| Invalidated by D1/H4 structure | 6,358 |
+| D1-valid setups | 4,616 |
+| Setups with OB | 2,940 |
+| Filled trades | 787 |
+| Wins / losses | 172 / 614 |
+| Win rate | 21.88% |
+| Average winning RR | 3.83R |
+| Cumulative result | +45.08R |
+| Profit factor | 1.073 |
+| Max drawdown | 33.30R |
+| Max losing streak | 19 |
+
+The D1 rule removed about 58% of initial setups but left only marginal positive
+expectancy and a 9.99% drawdown at the configured 0.30% risk. It therefore did
+not justify replacing the production fixed-1R target.
+
+### Live-2 H4 proximity to completed D1 support/resistance
+
+**Run:** GitHub Actions run 35210518016
+
+The signed distance separated an actual D1 sweep (`<0`) from exact touch (`=0`)
+and candles merely near the level. Bullish trades measured Live-2 H4 low minus
+the completed D1 low; bearish trades used the mirrored high calculation.
+
+| Live-2 interaction | Trades | Win rate | Avg R | Total R |
+|---|---:|---:|---:|---:|
+| Swept | 232 | 18.1% | -0.073R | -16.86R |
+| Exact touch | 11 | 36.4% | +1.104R | +12.15R |
+| 0–5 pips away | 89 | 24.7% | +0.246R | +21.89R |
+| 5–10 pips away | 97 | 23.7% | +0.173R | +16.74R |
+| 10–20 pips away | 130 | 17.7% | -0.128R | -16.62R |
+| More than 20 pips away | 227 | 25.6% | +0.122R | +27.78R |
+
+Sweep plus reclaim was not beneficial: 120 such trades won 16.7% and returned
+-23.66R. The 112 sweeps without reclaim returned +6.81R. Proximity was also
+non-monotonic, so neither a sweep requirement nor a simple maximum-distance
+filter was adopted.
+
+### D1 proximity × impulse × momentum × structural room
+
+**Run:** GitHub Actions run 35211367520
+
+The full five-dimensional table was too sparse: no complete combination cell
+had at least ten trades. It must not be used to select a narrow positive setup.
+The simpler two-variable tables did expose useful hypotheses:
+
+| Impulse | Momentum | Trades | Win rate | Avg R | Total R |
+|---|---:|---:|---:|---:|---:|
+| 15–25 pips | 20–30% | 35 | 40.0% | +0.84R | +29.44R |
+| <=15 pips | <=10% | 25 | 36.0% | +0.66R | +16.42R |
+| <=15 pips | 30–40% | 17 | 41.2% | +0.48R | +8.09R |
+| 25–35 pips | 30–40% | 23 | 30.4% | +0.33R | +7.52R |
+| 35–50 pips | 30–40% | 24 | 29.2% | +0.31R | +7.47R |
+
+Momentum of 10–20% was consistently weak with larger impulses: the 25–35,
+35–50 and >50-pip impulse groups returned approximately -14.2R, -13.1R and
+-22.6R. When impulse/remaining-room was 1–2x, momentum <=10% returned -23.74R
+and momentum 10–20% returned -26.53R across 98 combined trades. Conversely,
+when impulse/room exceeded 2x, strong momentum remained productive: >40%
+momentum returned +25.48R across 48 trades and 30–40% returned +18.89R across
+48 trades.
+
+D1 interaction depended on momentum as well. The 0–5-pip/30–40% group returned
++16.09R across 16 trades; 5–10 pips/30–40% returned +18.75R across 19 trades.
+An actual D1 sweep with only 10–20% momentum returned -28.38R across 52 trades.
+
+**Interpretation:** momentum appears to distinguish continuation from
+exhaustion after accounting for impulse and available room. The positive cells
+are too small to become production entry rules. The broader negative 10–20%
+momentum interaction is a candidate exclusion hypothesis for an independent
+test, not a current filter.
+
+## Production decision after the research sequence
+
+- Restore the frozen H4/session/entry framework, 3-pip buffer and fixed 1R TP.
+- Do not use D1 targets, D1/H4 invalidation, D1 proximity, sweep/reclaim,
+  impulse, momentum or structural-room filters in production.
+- Use M15, M5 and M2 for production OB detection, in that priority order.
+- Exclude M3 and M1 from OB detection. Continue using M1 price data to resolve
+  fills and same-candle TP/SL ordering.
+- Retain all 20 currency pairs and all other production parameters.
+
 ## Next validation test
 
 Freeze the **hypothesis**, not the threshold outcome: `Live-1 breakout strength relative to the complete two-candle impulse should be materially large enough to demonstrate continuation momentum.`

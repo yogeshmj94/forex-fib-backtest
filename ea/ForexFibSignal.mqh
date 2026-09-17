@@ -94,13 +94,13 @@ bool FindOBInRates(const FrozenSetup &x,const MqlRates &rates[],FrozenOB &ob)
  return false;
 }
 
-// Python priority is M15 -> M5 -> M3 -> M2 -> M1.
+// Production priority mirrors Python: M15 -> M5 -> M2.
 // Caller supplies bars restricted to [signal_time-4h, live_start).
 bool FindFrozenOB(const FrozenSetup &x,FrozenOB &ob)
 {
- ENUM_TIMEFRAMES tfs[5]={PERIOD_M15,PERIOD_M5,PERIOD_M3,PERIOD_M2,PERIOD_M1};
+ ENUM_TIMEFRAMES tfs[3]={PERIOD_M15,PERIOD_M5,PERIOD_M2};
  datetime from=x.signal_time-4*60*60,to=x.live_start-1;
- for(int i=0;i<5;i++){
+ for(int i=0;i<3;i++){
    MqlRates r[];ArraySetAsSeries(r,false);
    int copied=CopyRates(x.symbol,tfs[i],from,to,r);
    if(copied<=1) continue;
